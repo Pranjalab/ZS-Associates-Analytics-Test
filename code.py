@@ -157,7 +157,11 @@ print("LinearRegression Test Accuracy (explained_variance_score):" + str((metric
 
 
 with open('data/submission.csv', '+w') as file:
-    file.write('soldierId, bestSoldierPerc\n')
+    file.write('soldierId,bestSoldierPerc\n')
     for i in range(len(LR_submit)):
+        if LR_submit[i] > 1:
+            LR_submit[i] = 1
+        if LR_submit[i] < 0:
+            LR_submit[i] = 0
         file.write(str(submit_Id[i]) + ',' + str(LR_submit[i]) + '\n')
 
