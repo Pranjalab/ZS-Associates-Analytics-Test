@@ -9,7 +9,7 @@ Created on Sun Oct 28 04:24:08 2018
 import pandas as pd
 import numpy as np
 from sklearn.impute import SimpleImputer
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 
 def get_data(Remove_na_per = 100):
@@ -17,6 +17,8 @@ def get_data(Remove_na_per = 100):
     # Importing the data
     train = pd.read_csv("data/train.csv")
     submit = pd.read_csv("data/test.csv")
+
+    train = train[np.isfinite(train['bestSoldierPerc'])]
     
     y = train['bestSoldierPerc']
     x = train.drop(['soldierId', 'shipId', 'attackId', 'bestSoldierPerc'], axis=1)
