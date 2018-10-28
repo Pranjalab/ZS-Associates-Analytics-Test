@@ -15,7 +15,7 @@ x_train, x_test, y_train, y_test, submit_Id, submit_x = get_data()
 
 lg = lgb.LGBMRegressor(silent=False, learning_rate=0.1, n_estimators=200, num_leaves=300)
 
-param_dist = {"max_depth": [15, 10, 5]
+param_dist = {"max_depth": [15, 16, 18]
 }
 
 grid_search = GridSearchCV(lg, n_jobs=-1, param_grid=param_dist, cv = 2,
