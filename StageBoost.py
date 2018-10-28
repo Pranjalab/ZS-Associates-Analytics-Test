@@ -5,24 +5,24 @@ Created on Sun Oct 28 05:28:18 2018
 @author: Pranjal
 """
 
-from xgboost import XGBRegressor
 import catboost as cat
 import lightgbm as lgb
-from sklearn import metrics
-from Data import get_data
-from sklearn.linear_model import LinearRegression
 import numpy as np
+from sklearn import metrics
+from sklearn.linear_model import LinearRegression
+from xgboost import XGBRegressor
 
+from Data import get_data
 
 x_train, x_test, y_train, y_test, submit_Id, submit_x = get_data()
 
 XGB_params = {
     'objective': 'reg:linear',
     'silent': 0,
-    'n_estimators' :300,
+    'n_estimators': 300,
     'max_depth': 10,
     'learning_rate': 0.01,
-    'min_child_weight':8,
+    'min_child_weight': 8,
     'gpu_id': 0,
     'max_bin': 16,
     'tree_method': 'gpu_hist'
@@ -30,16 +30,16 @@ XGB_params = {
 
 LGBM_prams = {
     "max_depth": 15,
-    'silent':False,
+    'silent': False,
     'learning_rate': 0.1,
-    'n_estimators':200,
-    'num_leaves':300
+    'n_estimators': 200,
+    'num_leaves': 300
 }
 
 Cat_prams = {
-    'iterations':300,
-    'l2_leaf_reg':1,
-    'learning_rate':0.1,
+    'iterations': 300,
+    'l2_leaf_reg': 1,
+    'learning_rate': 0.1,
     'depth': 13
 }
 
@@ -64,7 +64,6 @@ lb_test_predicted = lb.predict(x_test)
 lb_train_predicted = lb.predict(x_train)
 lb_submit = lb.predict(submit_x)
 
-
 # CatBoost
 print("Starting CatBoost...\n\n")
 cb.fit(x_train, y_train)
@@ -81,18 +80,23 @@ cb_submit = cb.predict(submit_x)
 
 print('\n')
 
-print("LightGBM Training Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_train, lb_train_predicted))))
+print("LightGBM Training Accuracy (mean_absolute_error):" + str(
+    (metrics.mean_absolute_error(y_train, lb_train_predicted))))
 print("LightGBM Test Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_test, lb_test_predicted))))
-print("LightGBM Training Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_train, lb_train_predicted)) * 100))
-print("LightGBM Test Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_test, lb_test_predicted)) * 100))
+print("LightGBM Training Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_train, lb_train_predicted)) * 100))
+print("LightGBM Test Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_test, lb_test_predicted)) * 100))
 
 print('\n')
 
-print("CatBoost Training Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_train, cb_train_predicted))))
+print("CatBoost Training Accuracy (mean_absolute_error):" + str(
+    (metrics.mean_absolute_error(y_train, cb_train_predicted))))
 print("CatBoost Test Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_test, cb_test_predicted))))
-print("CatBoost Training Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_train, cb_train_predicted)) * 100))
-print("CatBoost Test Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_test, cb_test_predicted)) * 100))
-
+print("CatBoost Training Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_train, cb_train_predicted)) * 100))
+print("CatBoost Test Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_test, cb_test_predicted)) * 100))
 
 # LinearRegression
 print("\n\nStarting LinearRegression...\n\n")
@@ -107,11 +111,14 @@ LR_test_predicted = LR.predict(LR_x_test)
 LR_train_predicted = LR.predict(LR_x_train)
 LR_submit = LR.predict(LR_x_submit)
 
-print("LinearRegression Training Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_train, LR_train_predicted))))
-print("LinearRegression Test Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_test, LR_test_predicted))))
-print("LinearRegression Training Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_train, cb_train_predicted)) * 100))
-print("LinearRegression Test Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_test, LR_test_predicted)) * 100))
-
+print("LinearRegression Training Accuracy (mean_absolute_error):" + str(
+    (metrics.mean_absolute_error(y_train, LR_train_predicted))))
+print("LinearRegression Test Accuracy (mean_absolute_error):" + str(
+    (metrics.mean_absolute_error(y_test, LR_test_predicted))))
+print("LinearRegression Training Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_train, cb_train_predicted)) * 100))
+print("LinearRegression Test Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_test, LR_test_predicted)) * 100))
 
 with open('data/submission.csv', '+w') as file:
     file.write('soldierId,bestSoldierPerc\n')
@@ -121,12 +128,3 @@ with open('data/submission.csv', '+w') as file:
         if LR_submit[i] < 0:
             LR_submit[i] = 0
         file.write(str(submit_Id[i]) + ',' + str(LR_submit[i]) + '\n')
-
-
-
-
-
-
-
-
-
