@@ -19,17 +19,31 @@ x_train, x_test, y_train, y_test, submit_Id, submit_x = get_data()
 # LightGBM
 print("Starting LightGBM...\n\n")
 
+seed = 0
+
 LGBM_prams = {
     "max_depth": 15,
-    'max_bin':450,
+    'max_bin':500,
     'silent': False,
     'learning_rate': 0.1,
-    'n_estimators': 300,
+    'n_estimators': 500,
     'num_leaves': 200
 }
 
-lb = lgb.LGBMRegressor(**LGBM_prams)
-lb.fit(x_train, y_train)
+
+
+LGBM_prams = {
+    "max_depth": 15,
+    'max_bin': 255,
+    'silent': False,
+    'learning_rate': 0.05,
+    'n_estimators': 300,
+    'num_leaves': 300,
+    "device": "gpu"
+}
+
+lb = lgb.LGBMRegressor(**LGBM_prams, seed=seed)
+lb.fit(x_train, y_train, verbose=True)
 
 lb_test_predicted = lb.predict(x_test)
 lb_train_predicted = lb.predict(x_train)
@@ -58,7 +72,8 @@ Cat_prams = {
     'task_type':"GPU"
 }
 
-cb = cat.CatBoostRegressor(**Cat_prams)
+
+cb = cat.CatBoostRegressor(**Cat_prams, random_seed=seed)
 cb.fit(x_train, y_train, verbose = False)
 
 cb_test_predicted = cb.predict(x_test)
@@ -104,7 +119,7 @@ XGB_params = {
 eval_set =  [(XGB_x_train, y_train), (XGB_x_test, y_test)]
 eval_metric = ["map","mae"]
 
-XGB = XGBRegressor(**XGB_params)
+XGB = XGBRegressor(**XGB_params, seed=seed)
 XGB.fit(XGB_x_train, y_train, eval_metric=eval_metric, eval_set=eval_set, verbose=False)
 
 XGB_test_predicted = XGB.predict(XGB_x_test)
@@ -124,8 +139,8 @@ print("XGBoost Training Accuracy (r2_score):" + str(
 print("XGBoost Test Accuracy (r2_score):" + str(
     (metrics.r2_score(y_test, XGB_test_predicted)) * 100))
 
-
-with open('data/submission_' + str(time()) + '.csv', '+w') as file:
+acc = metrics.r2_score(y_test, XGB_test_predicted)
+with open('data/submission_' + str(acc) + '.csv', '+w') as file:
     file.write('soldierId,bestSoldierPerc\n')
     for i in range(len(XGB_submit)):
         if XGB_submit[i] > 1:
@@ -133,3 +148,13 @@ with open('data/submission_' + str(time()) + '.csv', '+w') as file:
         if XGB_submit[i] < 0:
             XGB_submit[i] = 0
         file.write(str(submit_Id[i]) + ',' + str(XGB_submit[i]) + '\n')
+
+
+xgb = XGBRegressor()
+xgb.fit(x_train, y_train)
+
+import xgboost
+ax = xgboost.plot_importance(xgb)
+fig = ax.figure
+fig.set_size_inches(15, 15)
+
