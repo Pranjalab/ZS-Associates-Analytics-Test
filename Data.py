@@ -46,6 +46,6 @@ def get_data(Remove_na_per=100):
     x = imputer.fit_transform(x)
     submit_x = imputer.fit_transform(submit_x)
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.3)
 
     return x_train, x_test, y_train, y_test, submit_Id, submit_x

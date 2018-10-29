@@ -11,72 +11,29 @@ import numpy as np
 from sklearn import metrics
 from sklearn.linear_model import LinearRegression
 from xgboost import XGBRegressor
-
+from time import time
 from Data import get_data
 
 x_train, x_test, y_train, y_test, submit_Id, submit_x = get_data()
 
-XGB_params = {
-    'objective': 'reg:linear',
-    'silent': 0,
-    'n_estimators': 300,
-    'max_depth': 10,
-    'learning_rate': 0.01,
-    'min_child_weight': 8,
-    'gpu_id': 0,
-    'max_bin': 16,
-    'tree_method': 'gpu_hist'
-}
+# LightGBM
+print("Starting LightGBM...\n\n")
 
 LGBM_prams = {
     "max_depth": 15,
+    'max_bin':450,
     'silent': False,
     'learning_rate': 0.1,
-    'n_estimators': 200,
-    'num_leaves': 300
+    'n_estimators': 300,
+    'num_leaves': 200
 }
 
-Cat_prams = {
-    'iterations': 300,
-    'l2_leaf_reg': 1,
-    'learning_rate': 0.1,
-    'depth': 13
-}
-
-xgb = XGBRegressor(**XGB_params)
 lb = lgb.LGBMRegressor(**LGBM_prams)
-cb = cat.CatBoostRegressor(**Cat_prams)
-
-# # XGBoost
-# print("Starting XGBoost...\n\n")
-# xgb.fit(x_train, y_train)
-#
-# xgb_test_predicted = xgb.predict(x_test)
-# xgb_train_predicted = xgb.predict(x_train)
-# xgb_submit = xgb.predict(submit_x)
-#
-
-# LightGBM
-print("Starting LightGBM...\n\n")
 lb.fit(x_train, y_train)
 
 lb_test_predicted = lb.predict(x_test)
 lb_train_predicted = lb.predict(x_train)
 lb_submit = lb.predict(submit_x)
-
-# CatBoost
-print("Starting CatBoost...\n\n")
-cb.fit(x_train, y_train)
-
-cb_test_predicted = cb.predict(x_test)
-cb_train_predicted = cb.predict(x_train)
-cb_submit = cb.predict(submit_x)
-
-#
-# print("XGBoost Training Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_train, xgb_train_predicted))))
-# print("XGBoost Test Accuracy (mean_absolute_error):" + str((metrics.mean_absolute_error(y_test, xgb_test_predicted))))
-# print("XGBoost Training Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_train, xgb_train_predicted)) * 100))
-# print("XGBoost Test Accuracy (explained_variance_score):" + str((metrics.explained_variance_score(y_test, xgb_test_predicted)) * 100))
 
 print('\n')
 
@@ -88,6 +45,26 @@ print("LightGBM Training Accuracy (explained_variance_score):" + str(
 print("LightGBM Test Accuracy (explained_variance_score):" + str(
     (metrics.explained_variance_score(y_test, lb_test_predicted)) * 100))
 
+
+# CatBoost
+print("Starting CatBoost...\n\n")
+
+
+Cat_prams = {
+    'iterations': 800,
+    'l2_leaf_reg': 10,
+    'learning_rate': 0.1,
+    'depth': 13,
+    'task_type':"GPU"
+}
+
+cb = cat.CatBoostRegressor(**Cat_prams)
+cb.fit(x_train, y_train, verbose = False)
+
+cb_test_predicted = cb.predict(x_test)
+cb_train_predicted = cb.predict(x_train)
+cb_submit = cb.predict(submit_x)
+
 print('\n')
 
 print("CatBoost Training Accuracy (mean_absolute_error):" + str(
@@ -98,33 +75,61 @@ print("CatBoost Training Accuracy (explained_variance_score):" + str(
 print("CatBoost Test Accuracy (explained_variance_score):" + str(
     (metrics.explained_variance_score(y_test, cb_test_predicted)) * 100))
 
-# LinearRegression
-print("\n\nStarting LinearRegression...\n\n")
-LR_x_train = np.column_stack((lb_train_predicted, cb_train_predicted))
-LR_x_test = np.column_stack((lb_test_predicted, cb_test_predicted))
-LR_x_submit = np.column_stack((lb_submit, cb_submit))
 
-LR = LinearRegression()
-LR.fit(LR_x_train, y_train)
+print("\n\nStarting XGBoost...\n\n")
 
-LR_test_predicted = LR.predict(LR_x_test)
-LR_train_predicted = LR.predict(LR_x_train)
-LR_submit = LR.predict(LR_x_submit)
+predicted = [lb_train_predicted, cb_train_predicted, lb_test_predicted, cb_test_predicted, lb_submit, cb_submit]
+for prad in predicted:
+    for i in range(len(prad)):
+        if prad[i] > 1:
+            prad[i] = 1
+        if prad[i] < 0:
+            prad[i] = 0
 
-print("LinearRegression Training Accuracy (mean_absolute_error):" + str(
-    (metrics.mean_absolute_error(y_train, LR_train_predicted))))
-print("LinearRegression Test Accuracy (mean_absolute_error):" + str(
-    (metrics.mean_absolute_error(y_test, LR_test_predicted))))
-print("LinearRegression Training Accuracy (explained_variance_score):" + str(
+
+XGB_x_train = np.column_stack((lb_train_predicted, cb_train_predicted))
+XGB_x_test = np.column_stack((lb_test_predicted, cb_test_predicted))
+XGB_x_submit = np.column_stack((lb_submit, cb_submit))
+
+XGB_params = {
+    'objective': 'reg:linear',
+    'silent': 0,
+    'n_estimators': 50,
+    'subsample': 0.9,
+    'colsample_bytree ': 0.4,
+    'gpu_id': 0,
+    'tree_method': 'gpu_hist'
+}
+
+eval_set =  [(XGB_x_train, y_train), (XGB_x_test, y_test)]
+eval_metric = ["map","mae"]
+
+XGB = XGBRegressor(**XGB_params)
+XGB.fit(XGB_x_train, y_train, eval_metric=eval_metric, eval_set=eval_set, verbose=False)
+
+XGB_test_predicted = XGB.predict(XGB_x_test)
+XGB_train_predicted = XGB.predict(XGB_x_train)
+XGB_submit = XGB.predict(XGB_x_submit)
+
+print("XGBoost Training Accuracy (mean_absolute_error):" + str(
+    (metrics.mean_absolute_error(y_train, XGB_train_predicted))))
+print("XGBoost Test Accuracy (mean_absolute_error):" + str(
+    (metrics.mean_absolute_error(y_test, XGB_test_predicted))))
+print("XGBoost Training Accuracy (explained_variance_score):" + str(
     (metrics.explained_variance_score(y_train, cb_train_predicted)) * 100))
-print("LinearRegression Test Accuracy (explained_variance_score):" + str(
-    (metrics.explained_variance_score(y_test, LR_test_predicted)) * 100))
+print("XGBoost Test Accuracy (explained_variance_score):" + str(
+    (metrics.explained_variance_score(y_test, XGB_test_predicted)) * 100))
+print("XGBoost Training Accuracy (r2_score):" + str(
+    (metrics.r2_score(y_train, cb_train_predicted)) * 100))
+print("XGBoost Test Accuracy (r2_score):" + str(
+    (metrics.r2_score(y_test, XGB_test_predicted)) * 100))
 
-with open('data/submission.csv', '+w') as file:
+
+with open('data/submission_' + str(time()) + '.csv', '+w') as file:
     file.write('soldierId,bestSoldierPerc\n')
-    for i in range(len(LR_submit)):
-        if LR_submit[i] > 1:
-            LR_submit[i] = 1
-        if LR_submit[i] < 0:
-            LR_submit[i] = 0
-        file.write(str(submit_Id[i]) + ',' + str(LR_submit[i]) + '\n')
+    for i in range(len(XGB_submit)):
+        if XGB_submit[i] > 1:
+            XGB_submit[i] = 1
+        if XGB_submit[i] < 0:
+            XGB_submit[i] = 0
+        file.write(str(submit_Id[i]) + ',' + str(XGB_submit[i]) + '\n')
